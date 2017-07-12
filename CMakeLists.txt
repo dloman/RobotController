@@ -17,16 +17,21 @@ add_definitions(-fPIC)
 set(RobotController_VERSION_MAJOR 0)
 set(RobotController_VERSION_MINOR 1)
 
+include_directories(src)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
+
 ################################################################################
 find_package(DanLib REQUIRED)
 
 include_directories(${DanLib_INCLUDE_DIR})
 message(" - DanLib found include dir = ${DanLib_INCLUDE_DIR}")
+
 ################################################################################
-find_package(wxWidgets REQUIRED)
+find_package(VideoLib REQUIRED)
 
-include("${wxWidgets_USE_FILE}")
-
+include_directories(${VideoLib_INCLUDE_DIR})
+message(" - VideoLib found include dir = ${VideoLib_INCLUDE_DIR}")
 ################################################################################
 find_package(GuiStuff REQUIRED)
 
@@ -34,10 +39,9 @@ include_directories(${GuiStuff_INCLUDE_DIR})
 
 message(" - GuiStuff found include dir = ${GuiStuff_INCLUDE_DIR}")
 ################################################################################
+find_package(wxWidgets REQUIRED)
 
-include_directories(src)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
+include("${wxWidgets_USE_FILE}")
 
 ################################################################################
 add_executable(
@@ -49,6 +53,8 @@ add_executable(
 target_link_libraries(
   RobotController
   GuiStuffLib
+  VideoPlayerLib
+  Image
   ${wxWidgets_LIBRARIES}
   )
 

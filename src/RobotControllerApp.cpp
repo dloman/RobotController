@@ -1,9 +1,9 @@
 #include "RobotControllerApp.hpp"
-#include "Packets.hpp"
 
 #include <DanLib/Random/Random.hpp>
+#include <VideoLib/VideoPlayer/VideoPlayer.hpp>
 
-#include <GuiStuff/GridDisplayer.hpp>
+#include <GuiStuff/Helpers.hpp>
 #include <GuiStuff/PictureInPictureWindow.hpp>
 #include <wx/sizer.h>
 
@@ -41,6 +41,19 @@ namespace
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
+RobotControllerApp::RobotControllerApp()
+  : mpFrame(nullptr),
+    mIsRunning(false),
+    mpThread(nullptr),
+    mpMapVideoWindow(nullptr),
+    mpGridDisplayer(nullptr),
+    mpVideoPlayer(nullptr)
+{
+  wxInitAllImageHandlers();
+}
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 RobotControllerApp::~RobotControllerApp()
 {
   mIsRunning = false;
@@ -58,53 +71,98 @@ bool RobotControllerApp::OnInit()
   SetVendorName("Lomancer Heavy Industries");
   SetAppName("Robot Controller");
 
-  auto pFrame = new wxFrame(nullptr, wxID_ANY, "Robot Controller");
+  mpFrame =
+    new wxFrame(
+      nullptr,
+      wxID_ANY,
+      "Robot Controller",
+      wxDefaultPosition,
+      wxSize(1000,800));
 
-  auto pGridDisplayer = new gs::GridDisplayer<rc::MotorCommand, rc::Position>(pFrame);
+  mpMapVideoWindow = new gs::PictureInPictureWindow(mpFrame);
 
-  auto pMainSizer = new wxBoxSizer(wxVERTICAL);
+  mpGridDisplayer =
+    new gs::GridDisplayer<rc::MotorCommand, rc::Position>(mpFrame);
 
-  pMainSizer->Add(pGridDisplayer, 0, wxEXPAND | wxALL, 1);
+  auto success = SetupMap();
 
-  wxImage Image, Temp;
+  SetupVideo();
+
+  SetupDisplay();
+
+  SetupTelemetry();
+
+  return success;
+}
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+bool RobotControllerApp::SetupMap()
+{
+  wxImage Image;
 
   if (!Image.LoadFile("/home/dloman/SbhxMap.bmp", wxBITMAP_TYPE_ANY))
   {
     return false;
   }
 
-  if (!Temp.LoadFile("/home/dloman/pic2.bmp", wxBITMAP_TYPE_ANY))
-  {
-    return false;
-  }
+  mpMapVideoWindow->SetImage1(Image);
 
-  mpMapVideoWindow = new gs::PictureInPictureWindow(pFrame, Image, Temp);
+  return true;
+}
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+void RobotControllerApp::SetupVideo()
+{
+  mpVideoPlayer = std::make_unique<vl::VideoPlayer>("/dev/video0");
+
+  mpVideoPlayer->GetSignalFrame().Connect(
+    [this] (const vl::Frame frame)
+    {
+      const auto& image = frame.GetImage();
+
+      mpMapVideoWindow->SetImage2(image);
+    });
+}
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+void RobotControllerApp::SetupDisplay()
+{
+  auto pMainSizer = new wxBoxSizer(wxVERTICAL);
+
+  pMainSizer->Add(mpGridDisplayer, 0, wxEXPAND | wxALL, 1);
 
   pMainSizer->Add(mpMapVideoWindow, 5, wxEXPAND | wxALL, 1);
 
-  pFrame->SetSizer(pMainSizer);
+  mpFrame->SetSizer(pMainSizer);
 
-  pFrame->Layout();
+  mpFrame->Layout();
 
-  pFrame->Show();
+  mpFrame->Show();
+}
 
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+void RobotControllerApp::SetupTelemetry()
+{
   mIsRunning = true;
 
-  mpThread.reset(new std::thread([pGridDisplayer, this]
+  mpThread.reset(new std::thread([this]
     {
       while (mIsRunning)
       {
         auto MotorCommand = GetRandomMotorCommand();
 
-        pGridDisplayer->Set(MotorCommand);
+        mpGridDisplayer->Set(MotorCommand);
 
         auto Position = GetRandomPosition();
 
-        pGridDisplayer->Set(Position);
+        mpGridDisplayer->Set(Position);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
       }
     }));
-
-  return true;
 }
+
