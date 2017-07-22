@@ -106,7 +106,12 @@ bool RobotControllerApp::SetupMap()
     return false;
   }
 
-  mpMapVideoWindow->SetImage1(Image);
+  dl::image::Image imageWrapper(
+    Image.GetWidth(),
+    Image.GetHeight(),
+    std::experimental::make_observer(reinterpret_cast<std::byte*>(Image.GetData())));
+
+  mpMapVideoWindow->SetImage1(imageWrapper);
 
   return true;
 }
@@ -122,7 +127,7 @@ void RobotControllerApp::SetupVideo()
     {
       const auto& image = frame.GetImage();
 
-      mpMapVideoWindow->SetImage2(image);
+      mpMapVideoWindow->SetImage2(std::move(image));
     });
 }
 
