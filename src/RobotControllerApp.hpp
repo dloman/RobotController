@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <thread>
 
 namespace gs
@@ -49,6 +50,8 @@ class RobotControllerApp : public wxApp
     std::atomic<bool> mIsRunning;
 
     std::unique_ptr<std::thread> mpThread;
+
+    std::mutex mMapVideoMutex;
 
     gs::PictureInPictureWindow* mpMapVideoWindow;
 

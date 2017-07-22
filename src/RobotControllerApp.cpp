@@ -56,6 +56,8 @@ RobotControllerApp::RobotControllerApp()
 //------------------------------------------------------------------------------
 RobotControllerApp::~RobotControllerApp()
 {
+  std::lock_guard lock(mMapVideoMutex);
+
   mIsRunning = false;
 
   if (mpThread && mpThread->joinable())
@@ -127,7 +129,12 @@ void RobotControllerApp::SetupVideo()
     {
       const auto& image = frame.GetImage();
 
-      mpMapVideoWindow->SetImage2(std::move(image));
+      std::lock_guard lock(mMapVideoMutex);
+
+      if (mpMapVideoWindow)
+      {
+        mpMapVideoWindow->SetImage2(std::move(image));
+      }
     });
 }
 
