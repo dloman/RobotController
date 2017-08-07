@@ -101,19 +101,18 @@ bool RobotControllerApp::OnInit()
 //------------------------------------------------------------------------------
 bool RobotControllerApp::SetupMap()
 {
-  wxImage Image;
-
-  if (!Image.LoadFile("/home/dloman/SbhxMap.bmp", wxBITMAP_TYPE_ANY))
+  if (!mMapImage.LoadFile("/home/dloman/SbhxMap.bmp", wxBITMAP_TYPE_ANY))
   {
     return false;
   }
 
-  dl::image::Image imageWrapper(
-    Image.GetWidth(),
-    Image.GetHeight(),
-    std::experimental::make_observer(reinterpret_cast<std::byte*>(Image.GetData())));
+  auto pImageWrapper = std::make_shared<dl::image::Image>(
+    mMapImage.GetWidth(),
+    mMapImage.GetHeight(),
+    std::experimental::make_observer(
+      reinterpret_cast<std::byte*>(mMapImage.GetData())));
 
-  mpMapVideoWindow->SetImage1(imageWrapper);
+  mpMapVideoWindow->SetImage1(pImageWrapper);
 
   return true;
 }
@@ -125,15 +124,15 @@ void RobotControllerApp::SetupVideo()
   mpVideoPlayer = std::make_unique<vl::VideoPlayer>("/dev/video0");
 
   mpVideoPlayer->GetSignalFrame().Connect(
-    [this] (const vl::Frame frame)
+    [this] (const std::shared_ptr<const vl::Frame>& pFrame)
     {
-      const auto& image = frame.GetImage();
+      const auto& pImage = pFrame->GetImage();
 
       std::lock_guard lock(mMapVideoMutex);
 
       if (mpMapVideoWindow)
       {
-        mpMapVideoWindow->SetImage2(std::move(image));
+        mpMapVideoWindow->SetImage2(std::move(pImage));
       }
     });
 }
@@ -173,8 +172,7 @@ void RobotControllerApp::SetupTelemetry()
 
         mpGridDisplayer->Set(Position);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
       }
     }));
 }
-

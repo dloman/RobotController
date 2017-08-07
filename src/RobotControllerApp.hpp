@@ -58,6 +58,8 @@ class RobotControllerApp : public wxApp
     gs::GridDisplayer<rc::MotorCommand, rc::Position>* mpGridDisplayer;
 
     std::unique_ptr<vl::VideoPlayer> mpVideoPlayer;
+
+    wxImage mMapImage;
 };
 
 IMPLEMENT_APP(RobotControllerApp);
